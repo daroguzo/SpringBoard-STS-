@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.board.domain.BoardVO;
+import com.example.demo.board.domain.FileVO;
 import com.example.demo.board.service.BoardService;
  
 @Controller
@@ -49,27 +50,40 @@ public class BoardController {
     private String boardInsertProc(HttpServletRequest request, @RequestPart MultipartFile files) throws Exception{
         
         BoardVO board = new BoardVO();
+        FileVO  file  = new FileVO();
         
         board.setSubject(request.getParameter("subject"));
         board.setContent(request.getParameter("content"));
         board.setWriter(request.getParameter("writer"));
         
-        String sourceFileName = files.getOriginalFilename(); 
-        String sourceFileNameExtension = FilenameUtils.getExtension(sourceFileName).toLowerCase(); 
-        File destinationFile; 
-        String destinationFileName;
-        String fileUrl = "uploadFiles 폴더 위치";
- 
         
-        do { 
-            destinationFileName = RandomStringUtils.randomAlphanumeric(32) + "." + sourceFileNameExtension; 
-            destinationFile = new File(fileUrl + destinationFileName); 
-        } while (destinationFile.exists()); 
+        if(files.isEmpty()){ //업로드할 파일이 없을 시
+            mBoardService.boardInsertService(board); //게시글 insert
+        }else{
+            String fileName = files.getOriginalFilename(); 
+            String fileNameExtension = FilenameUtils.getExtension(fileName).toLowerCase(); 
+            File destinationFile; 
+            String destinationFileName; 
+            String fileUrl = "/Users/seowon/Documents/Workspace/MyProject/tistory/demo/src/main/webapp/WEB-INF/uploadFiles/";
+            
+            do { 
+                destinationFileName = RandomStringUtils.randomAlphanumeric(32) + "." + fileNameExtension; 
+                destinationFile = new File(fileUrl+ destinationFileName); 
+            } while (destinationFile.exists()); 
+            
+            destinationFile.getParentFile().mkdirs(); 
+            files.transferTo(destinationFile); 
+            
+            mBoardService.boardInsertService(board); //게시글 insert
+            
+            file.setBno(board.getBno());
+            file.setFileName(destinationFileName);
+             file.setFileOriName(fileName);
+            file.setFileUrl(fileUrl);
+            
+            mBoardService.fileInsertService(file); //file insert
+        }
         
-        destinationFile.getParentFile().mkdirs(); 
-        files.transferTo(destinationFile); 
-        
-        mBoardService.boardInsertService(board);
         
         return "redirect:/list";
     }
